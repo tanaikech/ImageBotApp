@@ -20,7 +20,7 @@ The recent release of Gemini as an accessible API on Vertex AI and Google AI Stu
 
 # Principle
 
-![](images/fig2.pngf)
+![](images/fig2.png)
 
 This image illustrates the workflow of this image bot.
 
