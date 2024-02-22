@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+body {letter-spacing: .15rem;}
+</style>
+</head>
+
+<body>
+  <header>
+    <h1 class="header center light-blue-text text-darken-1">Image Bot by Gemini</h1>
+  </header>
+  <div class="container">
+    <button class="btn waves-effect waves-light" onclick="reset()">RESET</button>
+    <div id="main_chat_space"></div>
+  </div>
+  <footer>
+    <div class="footer-copyright center light-blue-text text-darken-1">
+    © 2024 Copyright <a href="https://tanaikech.github.io/">Tanaike</a>
+    </div>
+  </footer>
+
+  <script>
+  let history = [];
+
+  const form = '<form><div class="input-field col s6"><i class="material-icons prefix">comment</i><input type="text" name="text" class="validate" required></div><input type="button" class="btn waves-effect waves-light" value="GO" onclick="run(this)"></form>';
+  const main_chat_space = document.getElementById("main_chat_space");
+
+  document.addEventListener('DOMContentLoaded', reset);
+
+  function reset() {
+    main_chat_space.innerHTML = form;
+    history = [];
+  }
+
+  function run(e) {
+    e.value = "PROCESSING...";
+    const textTag = e.parentNode.text;
+    const text = textTag.value;
+    textTag.disabled = true;
+    e.disabled = true;
+    google.script.run
+      .withFailureHandler(({ message }) => {
+        main_chat_space.insertAdjacentHTML('beforeend', `<div class="card-panel blue darken-4 lighten-2 white-text">Error occurred. Please try it again.</div>`);
+        main_chat_space.insertAdjacentHTML('beforeend', form);
+      })
+      .withSuccessHandler(f => {
+        e.value = "DONE";
+        history = f.history;
+        if (f.response == "url") {
+          const imgHtml = '<div class="card-panel blue darken-4 lighten-2 white-text">' + f.value.map((url, i) => `<a href="${url}" target="_blank"><img src="${f.dataUrls[i]}" width="200"></a>`).join("") + '</div>';
+          main_chat_space.insertAdjacentHTML('beforeend', imgHtml);
+        } else if (f.response == "text") {
+          main_chat_space.insertAdjacentHTML('beforeend', `<div class="card-panel blue darken-4 lighten-2 white-text">${f.value}</div>`);
+        } else if (f.response == "uploadImage") {
+          main_chat_space.insertAdjacentHTML('beforeend', `<div class="card-panel blue darken-4 lighten-2 white-text">${f.value}</div>`);
+        }
+        main_chat_space.insertAdjacentHTML('beforeend', form);
+      }).doGet({ text, run: "doGemini", history });
+  }
+
+  function uploadImages(f) {
+    f.disabled = true;
+    const span = f.parentNode.querySelector("span");
+    span.innerText = "UPLOADING...";
+    Promise.all([...f.files].map(file => {
+      const fr = new FileReader();
+      return new Promise(r => {
+        fr.onload = e => r([[...new Int8Array(e.target.result)], file.type, file.name]);
+        fr.readAsArrayBuffer(file);
+      });
+    }))
+      .then(obj => {
+        if (obj.length > 0) {
+          google.script.run
+            .withFailureHandler(({ message }) => {
+              f.parentNode.parentNode.parentNode.insertAdjacentHTML('beforeend', `<div class="card-panel blue darken-4 lighten-2 white-text">Error occurred. Please try it again.</div>`);
+              span.innerText = "STOP";
+            })
+            .withSuccessHandler(o => {
+              if (o.ret == "No files") {
+                return;
+              }
+              if (history[history.length - 1].role == "model") {
+                history.push({ parts: [{ text: "" }], role: "user" });
+              }
+              history.push(o.pseudoModel);
+              const imgHtml = '<div class="card-panel blue darken-4 lighten-2 white-text">' + o.ret.map(({ fileUrl, dataUrl, description }) => `<div class="row"><div class="col s4"><a href="${fileUrl}" target="_blank"><img src="${dataUrl}" width="200"></a></div><div class="col s8">${description}</div></div>`).join("") + '</div>';
+              f.parentNode.parentNode.parentNode.insertAdjacentHTML('beforeend', imgHtml);
+              span.innerText = "DONE";
+            }).doGet({ obj, run: "saveFiles" });
+        } else {
+          f.disabled = true;
+          span.innerText = "DONE";
+        }
+      });
+  }
+  </script>
+</body>
+
+</html>

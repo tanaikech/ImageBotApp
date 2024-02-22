@@ -1,0 +1,15 @@
+{
+  "timeZone": "Asia/Tokyo",
+  "dependencies": {
+    "libraries": [
+      {
+        "userSymbol": "CorporaApp",
+        "version": "0",
+        "libraryId": "1XrAybct1KUwGcFrEZ9BOd5sa0SoHeQwGhOWkDOHki9lDFAX9OHlO03y_",
+        "developmentMode": true
+      }
+    ]
+  },
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8"
+}
